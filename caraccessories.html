@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>إلكترونيات – وسيط المنتجات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS الأصلي الخاص بك */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #d9e8fc 0%, #f0f6ff 100%);
+      color: #154360;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    header {
+      background-color: #4a90e2;
+      padding: 15px 30px;
+      color: white;
+      font-weight: 700;
+      font-size: 1.3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 3px 8px rgba(74,144,226,0.6);
+    }
+    header .left-section {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    header .back-btn {
+      background: rgba(255,255,255,0.85);
+      border: none;
+      color: #4a90e2;
+      padding: 8px 14px;
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    header .back-btn:hover {
+      background: #356ac3; color: white;
+    }
+    header .service-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #356ac3;
+      padding: 5px 15px;
+      border-radius: 18px;
+      box-shadow: 0 3px 8px rgba(53,106,195,0.7);
+    }
+
+    main {
+      flex-grow: 1;
+      max-width: 1200px;
+      margin: 30px auto;
+      width: 95%;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px,1fr));
+      gap: 20px;
+      min-height: 300px; /* لضمان وجود مساحة لعرض رسالة "لا توجد منتجات" */
+      align-content: start; /* لضمان بدء المحتوى من الأعلى */
+    }
+
+    .product-card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 6px 18px rgba(21,67,96,0.12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+    .product-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 14px 32px rgba(21,67,96,0.22);
+    }
+    .product-card img {
+      width: 100%;
+      height: 190px;
+      object-fit: cover;
+      border-bottom: 3px solid #4a90e2;
+      transition: transform 0.3s ease;
+    }
+    .product-card:hover img {
+      transform: scale(1.05);
+    }
+    .product-info {
+      padding: 18px 20px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .product-name { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; }
+    .product-price { font-weight: 600; font-size: 1.05rem; color: #4a90e2; margin-bottom: 15px; }
+    .product-link {
+      background-color: #4a90e2;
+      color: white;
+      text-align: center;
+      padding: 12px 0;
+      border-radius: 14px;
+      font-weight: 700;
+      transition: background-color 0.3s ease;
+    }
+    .product-link:hover { background-color: #356ac3; }
+
+    /* رسائل الحالة (لتحسين تجربة المستخدم) */
+    .status-message {
+      grid-column: 1 / -1; /* لجعل الرسالة تمتد عبر جميع الأعمدة */
+      text-align: center;
+      padding: 50px 20px;
+      font-size: 1.3rem;
+      color: #555;
+      background-color: #f8f8f8;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-top: 50px;
+      font-weight: 600;
+    }
+    .status-message.error {
+      color: #c0392b;
+      background-color: #fdeaea;
+      border: 1px solid #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="left-section">
+      <button class="back-btn" onclick="history.back()">رجوع</button>
+      <span class="service-name">إكسسوارات السيارات</span>
+    </div>
+  </header>
+
+  <main id="products">
+    <!-- سيتم ملء هذا القسم ديناميكياً -->
+    <div class="status-message" id="loading-message">جاري تحميل المنتجات...</div>
+  </main>
+
+  <script>
+  (function(){
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/19qFDigOg_jBMnAM5vN4kWsOxuTEF_1FLv_aYCgdklxQ/gviz/tq?tqx=out:json';
+    const productsContainer = document.getElementById('products');
+    const loadingMessage = document.getElementById('loading-message');
+
+    // دالة لعرض رسالة حالة
+    function displayStatusMessage(message, isError = false) {
+      if (loadingMessage) {
+        loadingMessage.remove(); // إزالة رسالة التحميل إذا كانت موجودة
+      }
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `status-message ${isError ? 'error' : ''}`;
+      msgDiv.textContent = message;
+      productsContainer.innerHTML = ''; // مسح أي محتوى سابق
+      productsContainer.appendChild(msgDiv);
+    }
+
+    fetch(sheetURL)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`خطأ في الشبكة أو الخادم: ${response.status} ${response.statusText}`);
+        }
+        return response.text();
+      })
+      .then(txt => {
+        let jsonData;
+        try {
+          // البحث عن بداية ونهاية JSON داخل الاستجابة
+          // نبحث عن النص بعد "google.visualization.Query.setResponse(" وحتى قبل ");"
+          const startIndex = txt.indexOf('google.visualization.Query.setResponse(');
+          if (startIndex === -1) {
+            throw new Error('لم يتم العثور على بداية غلاف JSON المتوقع.');
+          }
+
+          const afterFunctionCall = txt.substring(startIndex + 'google.visualization.Query.setResponse('.length);
+          const endIndex = afterFunctionCall.lastIndexOf(');'); // نبحث عن النهاية من آخر السلسلة
+          
+          if (endIndex === -1) {
+              throw new Error('لم يتم العثور على نهاية غلاف JSON المتوقع.');
+          }
+
+          const jsonString = afterFunctionCall.substring(0, endIndex);
+          jsonData = JSON.parse(jsonString);
+          
+        } catch (e) {
+          throw new Error(`فشل في تحليل بيانات JSON من جدول البيانات. تأكد من أن جدول البيانات يُرجع JSON صالح. تفاصيل: ${e.message}`);
+        }
+
+        if (!jsonData.table || !jsonData.table.rows) {
+          throw new Error('هيكل بيانات JSON غير متوقع من جدول البيانات.');
+        }
+
+        const rows = jsonData.table.rows.slice(1); // تخطي الصف الأول (رؤوس الأعمدة)
+        console.log('البيانات الخام المسترجعة من جدول البيانات:', rows); // للمساعدة في Debugging
+
+        if (loadingMessage) {
+          loadingMessage.remove();
+        }
+
+        let productsFound = false;
+        rows.forEach(r => {
+          // التحقق من وجود الأعمدة الكافية
+          // الترتيب المتوقع: name (0), price (1), imageURL (2), productURL (3), category (4)
+          if (r.c && r.c.length >= 5) {
+            const name = r.c[0] && r.c[0].v ? String(r.c[0].v).trim() : 'اسم المنتج غير متوفر';
+            const price = r.c[1] && typeof r.c[1].v !== 'undefined' ? r.c[1].v : 'غير متوفر';
+            const cat = r.c[4] && r.c[4].v ? String(r.c[4].v).trim() : '';
+
+            let img = '';
+            // معالجة عمود الصورة: استخلاص أول رابط يبدأ بـ 'http'
+            if (r.c[2] && r.c[2].v) {
+              const imgCellContent = String(r.c[2].v).trim();
+              const urlRegex = /(https?:\/\/[^\s]+)/g; // regex لاصطياد أي رابط يبدأ بـ http/https
+              const matches = imgCellContent.match(urlRegex);
+              if (matches && matches.length > 0) {
+                img = matches[0]; // نأخذ أول رابط تم العثور عليه
+              }
+            }
+            // إذا لم يتم العثور على رابط صورة، استخدم صورة placeholder
+            if (!img) {
+                img = 'https://placehold.co/190x190/eeeeee/333333?text=No+Image';
+            }
+
+
+            let link = '';
+            // معالجة عمود رابط المنتج (العمود الرابع في JSON، r.c[3])
+            if (r.c[3] && r.c[3].v) {
+                link = String(r.c[3].v).trim();
+            }
+            // إذا لم يتم العثور على رابط منتج، استخدم '#'
+            if (!link) {
+                link = '#';
+            }
+            
+            // Debugging: سجل كل صف والخاصية 'cat' الخاصة به
+            console.log(`معالجة الصف: Name: ${name}, Image: ${img}, Link: ${link}, Category: "${cat}"`);
+
+            if (cat === 'd5') { // الفئة التي تريد عرضها
+              productsFound = true;
+              const card = document.createElement('article');
+              card.className = 'product-card';
+              card.innerHTML = `
+                <img src="${img}" alt="${name}">
+                <div class="product-info">
+                  <div class="product-name">${name}</div>
+                  <div class="product-price">السعر: ${price} ر.س</div>
+                  <a href="${link}" class="product-link" target="_blank">عرض المنتج</a>
+                </div>`;
+              productsContainer.appendChild(card);
+            }
+          } else {
+            console.warn('تم تخطي صف بسبب عدم وجود عدد كافٍ من الأعمدة:', r.c);
+          }
+        });
+
+        if (!productsFound) {
+          displayStatusMessage('لا توجد منتجات من هذه الفئة متوفرة حالياً.');
+        }
+      })
+      .catch(e => {
+        console.error('خطأ في جلب أو معالجة البيانات:', e);
+        displayStatusMessage(`حدث خطأ أثناء تحميل المنتجات. يرجى التأكد من أن جدول البيانات متاح للعامة وأن تنسيق البيانات صحيح. تفاصيل الخطأ: ${e.message}`, true);
+      });
+  })();
+  </script>
+<script src="app.js"></script>
+</body>
+</html>
+
